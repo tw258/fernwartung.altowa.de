@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>WT-ITS Fernwartung herunterladen</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="box" role="main" aria-live="polite">
+      <h1>WT-ITS Fernwartung herunterladen</h1>
+      <div class="meta" id="meta">System wird erkannt…</div>
+
+      <div class="row">
+        <div class="item">
+          <a
+            id="downloadBtn"
+            class="big"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            >Wird geladen…</a
+          >
+          <div class="desc" id="descPrimary">…</div>
+        </div>
+
+        <div class="item">
+          <a
+            id="altowaBtn"
+            class="small secondary"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            style="display: none"
+            >Vollversion (offiziell)</a
+          >
+          <div class="desc" id="descAlt">…</div>
+        </div>
+
+        <div class="small-link">
+          <a
+            id="releasesBtn"
+            class="small"
+            href="https://github.com/rustdesk/rustdesk/releases"
+            target="_blank"
+            rel="noopener"
+            >Releases öffnen</a
+          >
+        </div>
+      </div>
+
+      <div class="note" id="note">
+        Wählen Sie die passende Version: der grüne Knopf ist die empfohlene,
+        einfache Variante für Windows.
+      </div>
+      <div class="err" id="err" role="status"></div>
+    </div>
+
+    <script>
+      (async () => {
+        const meta = document.getElementById("meta");
+        const btn = document.getElementById("downloadBtn");
+        const altowaBtn = document.getElementById("altowaBtn");
+        const descPrimary = document.getElementById("descPrimary");
+        const descAlt = document.getElementById("descAlt");
+        const err = document.getElementById("err");
+
+        function detectOS() {
+          const ua = navigator.userAgent || navigator.vendor || window.opera;
+          if (/windows nt/i.test(ua)) return "windows";
+          if (/macintosh|mac os x/i.test(ua)) return "mac";
+          if (/android/i.test(ua)) return "android";
+          if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+          return "unknown";
+        }
+
+        function pickAsset(assets, os) {
+          if (!Array.isArray(assets)) return null;
+          const normalized = assets.map((a) => ({
+            ...a,
+            lname: (a.name || "").toLowerCase(),
+          }));
+
+          if (os === "windows") {
+            let cand = normalized.find(
+              (a) => a.lname.includes("x86_64") && a.lname.endsWith(".exe"),
+            );
+            if (cand) return cand;
+            cand = normalized.find((a) => a.lname.endsWith(".exe"));
+            if (cand) return cand;
+          }
+
+          if (os === "mac") {
+            let cand = normalized.find(
+              (a) => a.lname.endsWith(".dmg") || a.lname.endsWith(".pkg"),
+            );
+            if (cand) return cand;
+            cand = normalized.find(
+              (a) =>
+                (a.lname.endsWith(".zip") || a.lname.endsWith(".tar.gz")) &&
+                (a.lname.includes("mac") ||
+                  a.lname.includes("darwin") ||
+                  a.lname.includes("macos")),
+            );
+            if (cand) return cand;
+          }
+
+          if (os === "android") {
+            let cand = normalized.find((a) => a.lname.endsWith(".apk"));
+            if (cand) return cand;
+          }
+
+          return null;
+        }
+
+        async function fetchLatest() {
+          const url =
+            "https://api.github.com/repos/rustdesk/rustdesk/releases/latest";
+          const r = await fetch(url, {
+            headers: { Accept: "application/vnd.github.v3+json" },
+          });
+          if (!r.ok)
+            throw new Error(`GitHub API error ${r.status} ${r.statusText}`);
+          return r.json();
+        }
+
+        const os = detectOS();
+        meta.textContent = `Erkanntes System: ${os === "unknown" ? "Unbekannt — Releases-Seite öffnen" : os.toUpperCase()}`;
+
+        try {
+          const release = await fetchLatest();
+          const version = release.tag_name || release.name || "(unknown)";
+          meta.innerHTML = `Erkanntes System: <strong>${os === "unknown" ? "Unbekannt" : os.toUpperCase()}</strong> — aktuelles Release <strong>${version}</strong>`;
+
+          if (os === "ios") {
+            const iosApp =
+              "https://apps.apple.com/app/rustdesk-remote-desktop/id1581225015";
+            btn.href = iosApp;
+            btn.textContent = "Im App Store öffnen";
+            descPrimary.textContent = "Öffnet die RustDesk-App im App Store.";
+            return;
+          }
+
+          const chosen = pickAsset(release.assets || [], os);
+          if (chosen) {
+            if (os === "windows") {
+              btn.href = "/assets/altowa.exe";
+              btn.textContent = "Minimal-Client (empfohlen)";
+              btn.title =
+                "Altowa minimaler Client — keine Installation, verbindet mit privatem Relay";
+              descPrimary.textContent =
+                "Vorkompilierter, installationsfreier Client für Windows. Verbindet direkt mit unserem privaten Relay-Server.";
+
+              altowaBtn.style.display = "inline-block";
+              altowaBtn.href = chosen.browser_download_url;
+              altowaBtn.textContent = `Vollversion (offiziell)`;
+              altowaBtn.title = `Offizielle RustDesk-Release-Datei: ${chosen.name}`;
+              descAlt.textContent =
+                "Offizielle RustDesk-Version; benötigt ggf. Installation und verwendet den offiziellen Relay-Server.";
+              err.textContent = "";
+
+              const note = document.getElementById("note");
+              note.textContent =
+                "Für Windows empfehlen wir den Altowa Minimal-Client. Andere Plattformen nutzen die offizielle RustDesk-Version.";
+            } else {
+              btn.href = chosen.browser_download_url;
+              btn.textContent = `Download ${chosen.name}`;
+              btn.title = `Direkter Download: ${chosen.name}`;
+              descPrimary.textContent =
+                "Offizielle RustDesk-Version — ggf. Installation erforderlich.";
+              altowaBtn.style.display = "none";
+              descAlt.textContent = "";
+              err.textContent = "";
+            }
+          } else {
+            btn.href = "https://github.com/rustdesk/rustdesk/releases";
+            btn.textContent = "Releases-Seite öffnen";
+            descPrimary.textContent = "Keine passende Release-Datei gefunden.";
+            altowaBtn.style.display = "none";
+            descAlt.textContent = "";
+            err.textContent =
+              "Kein passendes Release-Asset gefunden. Öffnen Sie die Releases-Seite, um manuell auszuwählen.";
+          }
+        } catch (e) {
+          console.error(e);
+          btn.href = "https://github.com/rustdesk/rustdesk/releases";
+          btn.textContent = "Releases-Seite öffnen";
+          descPrimary.textContent = "Fehler beim Abruf der Release-Daten.";
+          altowaBtn.style.display = "none";
+          descAlt.textContent = "";
+          err.textContent =
+            "Konnte das neueste Release nicht von GitHub abrufen. Ursache kann eine Netzwerk- oder GitHub-API-Ratebegrenzung sein.";
+        }
+      })();
+    </script>
+  </body>
+</html>
