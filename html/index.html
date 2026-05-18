@@ -26,6 +26,19 @@
 
         <div class="item">
           <a
+            id="altowaFullBtn"
+            class="small"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            style="display: none"
+            >Vollclient (privat)</a
+          >
+          <div class="desc" id="descFull">…</div>
+        </div>
+
+        <div class="item">
+          <a
             id="altowaBtn"
             class="small secondary"
             href="#"
@@ -50,8 +63,9 @@
       </div>
 
       <div class="note" id="note">
-        Wählen Sie die passende Version: der grüne Knopf ist die empfohlene,
-        einfache Variante für Windows.
+        Der grüne Knopf ist die empfohlene Windows-Variante. Wenn die
+        automatische Erkennung Ihr System nicht korrekt trifft, nutzen Sie bitte
+        die Releases-Seite als Alternative und wählen Sie dort Ihre Plattform.
       </div>
       <div class="err" id="err" role="status"></div>
     </div>
@@ -60,8 +74,10 @@
       (async () => {
         const meta = document.getElementById("meta");
         const btn = document.getElementById("downloadBtn");
+        const altowaFullBtn = document.getElementById("altowaFullBtn");
         const altowaBtn = document.getElementById("altowaBtn");
         const descPrimary = document.getElementById("descPrimary");
+        const descFull = document.getElementById("descFull");
         const descAlt = document.getElementById("descAlt");
         const err = document.getElementById("err");
 
@@ -71,6 +87,7 @@
           if (/macintosh|mac os x/i.test(ua)) return "mac";
           if (/android/i.test(ua)) return "android";
           if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+          if (/linux/i.test(ua)) return "linux";
           return "unknown";
         }
 
@@ -101,6 +118,24 @@
                 (a.lname.includes("mac") ||
                   a.lname.includes("darwin") ||
                   a.lname.includes("macos")),
+            );
+            if (cand) return cand;
+          }
+
+          if (os === "linux") {
+            let cand = normalized.find(
+              (a) =>
+                a.lname.endsWith(".AppImage") ||
+                a.lname.endsWith(".appimage") ||
+                a.lname.endsWith(".deb") ||
+                a.lname.endsWith(".rpm"),
+            );
+            if (cand) return cand;
+            cand = normalized.find(
+              (a) =>
+                a.lname.endsWith(".tar.gz") ||
+                a.lname.endsWith(".tar.xz") ||
+                a.lname.endsWith(".zip"),
             );
             if (cand) return cand;
           }
@@ -138,6 +173,10 @@
             btn.href = iosApp;
             btn.textContent = "Im App Store öffnen";
             descPrimary.textContent = "Öffnet die RustDesk-App im App Store.";
+            altowaFullBtn.style.display = "none";
+            descFull.textContent = "";
+            altowaBtn.style.display = "none";
+            descAlt.textContent = "";
             return;
           }
 
@@ -151,6 +190,14 @@
               descPrimary.textContent =
                 "Vorkompilierter, installationsfreier Client für Windows. Verbindet direkt mit unserem privaten Relay-Server.";
 
+              altowaFullBtn.style.display = "inline-block";
+              altowaFullBtn.href = "/assets/altowa-full.exe";
+              altowaFullBtn.textContent = `Vollclient (privat)`;
+              altowaFullBtn.title =
+                "Altowa Vollclient — vollständige Windows-Installation mit privatem Relay";
+              descFull.textContent =
+                "Vollständige Windows-Installation, die unseren privaten Relay-Server verwendet.";
+
               altowaBtn.style.display = "inline-block";
               altowaBtn.href = chosen.browser_download_url;
               altowaBtn.textContent = `Vollversion (offiziell)`;
@@ -161,13 +208,15 @@
 
               const note = document.getElementById("note");
               note.textContent =
-                "Für Windows empfehlen wir den Altowa Minimal-Client. Andere Plattformen nutzen die offizielle RustDesk-Version.";
+                "Für Windows empfehlen wir den Altowa Minimal-Client. Als zweite Option gibt es den Altowa Vollclient; weitere Plattformen finden Sie auf der Releases-Seite.";
             } else {
               btn.href = chosen.browser_download_url;
               btn.textContent = `Download ${chosen.name}`;
               btn.title = `Direkter Download: ${chosen.name}`;
               descPrimary.textContent =
                 "Offizielle RustDesk-Version — ggf. Installation erforderlich.";
+              altowaFullBtn.style.display = "none";
+              descFull.textContent = "";
               altowaBtn.style.display = "none";
               descAlt.textContent = "";
               err.textContent = "";
@@ -175,7 +224,10 @@
           } else {
             btn.href = "https://github.com/rustdesk/rustdesk/releases";
             btn.textContent = "Releases-Seite öffnen";
-            descPrimary.textContent = "Keine passende Release-Datei gefunden.";
+            descPrimary.textContent =
+              "Keine passende Release-Datei gefunden. Wählen Sie bitte manuell Ihre Plattform auf GitHub aus.";
+            altowaFullBtn.style.display = "none";
+            descFull.textContent = "";
             altowaBtn.style.display = "none";
             descAlt.textContent = "";
             err.textContent =
@@ -186,6 +238,8 @@
           btn.href = "https://github.com/rustdesk/rustdesk/releases";
           btn.textContent = "Releases-Seite öffnen";
           descPrimary.textContent = "Fehler beim Abruf der Release-Daten.";
+          altowaFullBtn.style.display = "none";
+          descFull.textContent = "";
           altowaBtn.style.display = "none";
           descAlt.textContent = "";
           err.textContent =
